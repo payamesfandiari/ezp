@@ -104,6 +104,7 @@ int main(int argc,char* argv[]) {
     param.bsp_ezp = 2;
     param.ezp_size = 1000;
     param.ezp_train_percent = 0.1;
+    param.ezp_lbl_func = &ezp_sign;
     parameter bsp_param = {1,1,1000,100.0,1.0,0.001,1.0,1};
     param.bsp_param = &bsp_param;
 
