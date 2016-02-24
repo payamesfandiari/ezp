@@ -18,6 +18,7 @@ struct parameter{
     double stop_thresh;
     double ils_perm;
     double C;
+
 };
 // Data
 // 'data' which is data and 'label' which is labels, rows and cols are also stored
@@ -28,6 +29,7 @@ struct problem{
     int* labels;
     int nr_plus;
     int nr_minus;
+    int num_class;
 };
 
 // Model
@@ -39,6 +41,7 @@ struct model{
     double error;
     double* W;
     double W0;
+
 };
 
 

@@ -1,9 +1,10 @@
 #include <iostream>
-#include <string>
+#include <map>
 #include <vector>
 #include <sstream>
 #include <fstream>
-#include "main.h"
+#include <set>
+#include "train.h"
 
 #define Malloc(type,n) (type*)malloc((n)*sizeof(type))
 
@@ -96,30 +97,49 @@ void parse_command_line(int argc, char **argv, std::string &input_file_name, std
     }
 }
 
-
-
+std::map<int,std::vector<int>> nr_class_map;
+std::set<int> s;
 
 int main(int argc,char* argv[]) {
-    ezp_param param;
-    param.bsp_ezp = 2;
-    param.ezp_size = 1000;
-    param.ezp_train_percent = 0.1;
-    param.ezp_lbl_func = &ezp_sign;
+//    std::ios::sync_with_stdio(false);
+    ezp_param ezpParam;
+    ezpParam.bsp_ezp = 2;
+    ezpParam.ezp_size = 1000;
+    ezpParam.ezp_train_percent = 0.1;
     parameter bsp_param = {1,1,1000,100.0,1.0,0.001,1.0,1};
-    param.bsp_param = &bsp_param;
+    ezpParam.bsp_param = &bsp_param;
 
-    std::cout << param.bsp_param->local_itr_thresh ;
+//    std::cout << ezpParam.bsp_param->local_itr_thresh ;
     std::string input_file_name;
     std::string model_file_name;
 
     if(argc < 3){
         exit_with_help();
     }
-    parse_command_line(argc,argv,input_file_name,model_file_name,param);
+    parse_command_line(argc, argv, input_file_name, model_file_name, ezpParam);
     problem* prob = read_problem(input_file_name);
+    std::cout << model_file_name <<std::endl;
+    print_to_file(ezpParam,*prob,model_file_name);
+    if(ezpParam.bsp_ezp == 1){
+        if(prob->num_class > 2){
 
+        }else if(prob->num_class == 2){
+            prob->nr_minus = nr_class_map[-1].size();
+            prob->nr_plus = nr_class_map[1].size();
+            model* out_mod = bsp(ezpParam.bsp_param,prob);
+            save_model(ezpParam,model_file_name,out_mod,1,prob->cols);
 
+        }
+    }else if(ezpParam.bsp_ezp == 2){
+        if(prob->num_class > 2){
 
+        }else if(prob->num_class == 2){
+            prob->nr_minus = nr_class_map[-1].size();
+            prob->nr_plus = nr_class_map[1].size();
+            model* out_mod = ezp(ezpParam,*prob);
+            save_model(ezpParam,model_file_name,out_mod,1,prob->cols);
+        }
+    }
 
     return 0;
 }
@@ -131,6 +151,7 @@ problem* read_problem(const std::string &input_file_name) {
     std::string line;
     std::vector<double> col;
     std::vector<int> lbls;
+
     int rows(0),cols(0),l(0);
     if(infile.is_open()) {
         double temp;
@@ -140,24 +161,84 @@ problem* read_problem(const std::string &input_file_name) {
             std::istringstream iss(line);
             iss >> l;
             lbls.push_back(l);
+            s.insert(l);
             while(iss >> temp){
                 col.push_back(temp);
             }
             if (cols==0) cols = col.size();
         }
-        printf("%d rows and %d cols have been read from the file : %s",rows,cols,input_file_name.c_str());
+        printf("%d rows and %d cols have been read from the file : %s\n",rows,cols,input_file_name.c_str());
         prob->rows = rows;
         prob->cols = cols;
         prob->data = new double[rows*cols];
         prob->labels = new int[rows];
+        prob->num_class = s.size();
+        for(int x : s){
+            std::vector<int> ind_map_elem;
+            nr_class_map[x] = ind_map_elem;
+        }
         for (int i = 0; i < rows; ++i) {
             for (int j = 0; j < cols; ++j) {
                 prob->data[i*cols+j] = col[i*cols+j];
             }
             prob->labels[i] = lbls[i];
+            nr_class_map[lbls[i]].push_back(i);
         }
     }
-    col.empty();
-    lbls.empty();
     return prob;
+}
+
+void print_to_file(ezp_param &ezpParam, problem &prob, std::string model_file_name) {
+    FILE* fout = fopen(model_file_name.c_str(),"w");
+    fprintf(fout,"rows:%d\ncols:%d\n",prob.rows,prob.cols);
+    fprintf(fout,"num_class:%d\n",prob.num_class);
+    if(ezpParam.bsp_ezp == 1)
+        fprintf(fout,"bsp_ezp:bsp\n");
+    else
+        fprintf(fout,"bsp_ezp:ezp\n");
+
+    fprintf(fout,"ezp_size:%d\n",ezpParam.ezp_size);
+    fprintf(fout,"ezp_train_per:%.3f\n",ezpParam.ezp_train_percent);
+    fprintf(fout,"bsp_c:%.5f\n",ezpParam.bsp_param->C);
+    fprintf(fout,"bsp_ils_itr:%d\n",ezpParam.bsp_param->ils_itr);
+    fprintf(fout,"bsp_ils_perm:%.5f\n",ezpParam.bsp_param->ils_perm);
+    fprintf(fout,"bsp_ils_step:%d\n",ezpParam.bsp_param->ils_step);
+    fprintf(fout,"bsp_init_w:%.5f\n",ezpParam.bsp_param->initial_w);
+    fprintf(fout,"bsp_l_itr_thresh:%d\n",ezpParam.bsp_param->local_itr_thresh);
+    fprintf(fout,"bsp_stop_thresh:%f\n",ezpParam.bsp_param->stop_thresh);
+    fprintf(fout,"bsp_w_inc:%f\n",ezpParam.bsp_param->w_inc);
+    fprintf(fout,"classes:");
+    for (int x: s) {
+        fprintf(fout,"%d ",x);
+    }
+    fprintf(fout,"model\n");
+    fclose(fout);
+}
+
+
+void save_model(ezp_param &ezpParam,std::string model_file_name,model* mod,int class1,int cols){
+    FILE* fout = fopen(model_file_name.c_str(),"a");
+    fprintf(fout,"class 1:%d\n",class1);
+    if (ezpParam.bsp_ezp == 1){
+        for (int i = 0; i < ezpParam.bsp_param->ils_itr; ++i) {
+            fprintf(fout,"err=%f;obj=%f\n",mod[i].error,mod[i].obj);
+            fprintf(fout,"%f ",mod[i].W0);
+            for (int j = 0; j < cols; ++j) {
+                fprintf(fout,"%f ",mod[i].W[j]);
+            }
+            fprintf(fout,"\n");
+        }
+    fprintf(fout,"\n");
+    } else{
+        for (int i = 0; i < ezpParam.bsp_param->ils_itr*ezpParam.ezp_size; ++i) {
+            fprintf(fout,"err=%f;obj=%f\n",mod[i].error,mod[i].obj);
+            fprintf(fout,"%f ",mod[i].W0);
+            for (int j = 0; j < cols; ++j) {
+                fprintf(fout,"%f ",mod[i].W[j]);
+            }
+            fprintf(fout,"\n");
+        }
+    }
+    fclose(fout);
+
 }
