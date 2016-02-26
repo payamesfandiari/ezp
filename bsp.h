@@ -47,6 +47,5 @@ struct model{
 
 void fisher_yates(int* array,int l);
 struct model* bsp(struct parameter* param,struct problem* prob);
-int* predict(struct model *mod, struct problem *prob,struct parameter* param);
 
 #endif //EZPLANE_BSP_H

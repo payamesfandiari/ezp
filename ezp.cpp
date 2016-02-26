@@ -8,7 +8,7 @@
 
 problem* create_data(const problem& prob,double tr_perc,int* plus_lbls,int* minus_lbls){
 
-    int  cd_plus(prob.nr_plus*tr_perc),cd_minus(prob.nr_minus*tr_perc);
+    int  cd_plus((prob.nr_plus*tr_perc)+1),cd_minus((prob.nr_minus*tr_perc)+1);
     int cd_rows (cd_minus+cd_plus);
     int* cd_lbl = new int[cd_rows];
     double* cd_data = new double[cd_rows*prob.cols];

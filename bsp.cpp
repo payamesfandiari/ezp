@@ -138,7 +138,7 @@ struct model* bsp(struct parameter* param,struct problem* prob){
     double errormargin = 0;
     int below = 0;
     int above = 0;
-    int errorplus = 0, errorminus = 0;
+    double errorplus = 0, errorminus = 0;
     double geomargin = INF;
     double abovedist = INF;
     double belowdist = INF;
@@ -403,7 +403,7 @@ struct model* bsp(struct parameter* param,struct problem* prob){
                 w0 = -1
                      * (projection[uniq_proj_ind[startm]]
                         + projection[uniq_proj_ind[startm + 1]]) / 2;
-                error = 0;
+//                error = 0;
                 errormargin = 0;
                 below = 0;
                 above = 0;
@@ -584,31 +584,4 @@ struct model* bsp(struct parameter* param,struct problem* prob){
 
     return output_model_;
 
-}
-
-
-int* predict(struct model *mod,struct problem *prob,struct parameter* param) {
-    int* out_lbl = new int[prob->rows];
-    double best_obj(mod[0].obj),proj(0);
-    int best_ind(0);
-    for (int i = 1; i < param->ils_itr; ++i) {
-        if(best_obj > mod[i].obj){
-            best_ind = i;
-            best_obj = mod[i].obj;
-        }
-    }
-
-    for (int i = 0; i < prob->rows; ++i) {
-        for (int j = 0; j < prob->cols; ++j) {
-            proj += prob->data[i*prob->cols +j]*mod[best_ind].W[j];
-        }
-        proj += mod[best_ind].W0;
-        if(proj > 0)
-            out_lbl[i] = 1;
-        else
-            out_lbl[i] = -1 ;
-
-    }
-
-    return out_lbl;
 }

@@ -4,6 +4,7 @@
 #include <sstream>
 #include <fstream>
 #include <set>
+#include <string>
 #include "train.h"
 
 #define Malloc(type,n) (type*)malloc((n)*sizeof(type))
@@ -122,20 +123,56 @@ int main(int argc,char* argv[]) {
     print_to_file(ezpParam,*prob,model_file_name);
     if(ezpParam.bsp_ezp == 1){
         if(prob->num_class > 2){
-
+            for(int plus_c : s){
+                prob->nr_plus = static_cast<int>(nr_class_map[plus_c].size());
+                prob->nr_minus = 0;
+                for(int c : s){
+                    if(c == plus_c){
+                        for (std::vector<int>::iterator it=nr_class_map[c].begin();it!=nr_class_map[c].end();++it) {
+                            prob->labels[*it] = 1;
+                        }
+                    }else{
+                        for (std::vector<int>::iterator it=nr_class_map[c].begin();it!=nr_class_map[c].end();++it) {
+                            prob->labels[*it] = -1;
+                        }
+                        prob->nr_minus += nr_class_map[c].size();
+                    }
+                }
+                model* out_mod = bsp(ezpParam.bsp_param,prob);
+                save_model(ezpParam,model_file_name,out_mod,plus_c,prob->cols);
+                delete(out_mod);
+            }
         }else if(prob->num_class == 2){
-            prob->nr_minus = nr_class_map[-1].size();
-            prob->nr_plus = nr_class_map[1].size();
+            prob->nr_minus = static_cast<int>( nr_class_map[-1].size());
+            prob->nr_plus = static_cast<int>(nr_class_map[1].size());
             model* out_mod = bsp(ezpParam.bsp_param,prob);
             save_model(ezpParam,model_file_name,out_mod,1,prob->cols);
 
         }
     }else if(ezpParam.bsp_ezp == 2){
         if(prob->num_class > 2){
-
+            for(int plus_c : s){
+                prob->nr_plus = static_cast<int>(nr_class_map[plus_c].size());
+                prob->nr_minus = 0;
+                for(int c : s){
+                    if(c == plus_c){
+                        for (std::vector<int>::iterator it=nr_class_map[c].begin();it!=nr_class_map[c].end();++it) {
+                            prob->labels[*it] = 1;
+                        }
+                    }else{
+                        for (std::vector<int>::iterator it=nr_class_map[c].begin();it!=nr_class_map[c].end();++it) {
+                            prob->labels[*it] = -1;
+                        }
+                        prob->nr_minus += nr_class_map[c].size();
+                    }
+                }
+                model* out_mod = ezp(ezpParam,*prob);
+                save_model(ezpParam,model_file_name,out_mod,plus_c,prob->cols);
+                delete(out_mod);
+            }
         }else if(prob->num_class == 2){
-            prob->nr_minus = nr_class_map[-1].size();
-            prob->nr_plus = nr_class_map[1].size();
+            prob->nr_minus = static_cast<int>( nr_class_map[-1].size());
+            prob->nr_plus = static_cast<int>(nr_class_map[1].size());
             model* out_mod = ezp(ezpParam,*prob);
             save_model(ezpParam,model_file_name,out_mod,1,prob->cols);
         }
@@ -165,14 +202,14 @@ problem* read_problem(const std::string &input_file_name) {
             while(iss >> temp){
                 col.push_back(temp);
             }
-            if (cols==0) cols = col.size();
+            if (cols==0) cols = static_cast<int>(col.size());
         }
         printf("%d rows and %d cols have been read from the file : %s\n",rows,cols,input_file_name.c_str());
         prob->rows = rows;
         prob->cols = cols;
         prob->data = new double[rows*cols];
         prob->labels = new int[rows];
-        prob->num_class = s.size();
+        prob->num_class = static_cast<int>(s.size());
         for(int x : s){
             std::vector<int> ind_map_elem;
             nr_class_map[x] = ind_map_elem;
@@ -211,7 +248,7 @@ void print_to_file(ezp_param &ezpParam, problem &prob, std::string model_file_na
     for (int x: s) {
         fprintf(fout,"%d ",x);
     }
-    fprintf(fout,"model\n");
+    fprintf(fout,"\nmodel\n");
     fclose(fout);
 }
 
@@ -228,7 +265,6 @@ void save_model(ezp_param &ezpParam,std::string model_file_name,model* mod,int c
             }
             fprintf(fout,"\n");
         }
-    fprintf(fout,"\n");
     } else{
         for (int i = 0; i < ezpParam.bsp_param->ils_itr*ezpParam.ezp_size; ++i) {
             fprintf(fout,"err=%f;obj=%f\n",mod[i].error,mod[i].obj);
