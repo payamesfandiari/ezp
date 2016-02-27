@@ -102,10 +102,9 @@ int main(int argc,char * argv[]){
         delete(prob);
     }else{
         if (predictParam.bsp_ezp == 1) {
-
             bsp_multi_predict(model_file, prob, predictParam, out_file_name);
         } else if (predictParam.bsp_ezp == 2) {
-//            ezp_one_transform(m, prob, predictParam, out_file_name);
+            ezp_multi_transform(model_file, prob, predictParam, out_file_name);
         } else {
             std::cerr << "Unrecognized Option ! Please run Train again...";
         }
@@ -494,4 +493,68 @@ void bsp_multi_predict(std::ifstream &model_file, problem *prob, predict_param &
     } else{
         std::cerr << "Unrecognized Option ! Please run Train again...";
     }
+}
+
+void ezp_multi_transform(std::ifstream &model_file, problem *prob, predict_param &predictParam,
+                         std::string &output_file) {
+
+    std::string cl_output;
+    double temp_proj(0),output(0);
+    int ind(0) ;
+    if(predictParam.pred_strategy < 5) {
+        for (int cl_num = 0; cl_num < predictParam.num_class; ++cl_num) {
+            cl_output = output_file + std::to_string(cl_num);
+            FILE* fout = fopen(cl_output.c_str(),"w");
+            model *raw_model = read_model(model_file, predictParam, prob->cols);
+            model *best_m ;
+            if(predictParam.pred_strategy == 3) {
+                best_m = pick_best_obj(raw_model, predictParam, prob->cols);
+            }else {
+                best_m = pick_best_err(raw_model, predictParam, prob->cols);
+            }
+            for (int i = 0; i < prob->rows; ++i) {
+                if(prob->labels[i] == predictParam.pos_class)
+                    fprintf(fout,"1 ");
+                else
+                    fprintf(fout,"-1 ");
+                temp_proj = 0;
+                for (int k = 0; k < predictParam.ezp_size; ++k) {
+                    for (int j = 0; j < prob->cols; ++j) {
+                        temp_proj += prob->data[i*prob->cols+j] * best_m[k].W[j];
+                    }
+                    temp_proj += best_m[k].W0;
+                    output = predictParam.ezp_lbl_func(temp_proj);
+                    fprintf(fout,"%f ",output);
+                }
+                fprintf(fout,"\n");
+            }
+            fclose(fout);
+        }
+    }else if(predictParam.pred_strategy == 5){
+        for (int cl_num = 0; cl_num < predictParam.num_class; ++cl_num) {
+            cl_output = output_file + std::to_string(cl_num);
+            FILE* fout = fopen(cl_output.c_str(),"w");
+            model *raw_model = read_model(model_file, predictParam, prob->cols);
+            for (int i = 0; i < prob->rows; ++i) {
+                if(prob->labels[i] == predictParam.pos_class)
+                    fprintf(fout,"1 ");
+                else
+                    fprintf(fout,"-1 ");
+                temp_proj = 0;
+                for (int k = 0; k < predictParam.ezp_size*predictParam.ils_itr; ++k) {
+                    for (int j = 0; j < prob->cols; ++j) {
+                        temp_proj += prob->data[i*prob->cols+j] * raw_model[k].W[j];
+                    }
+                    temp_proj += raw_model[k].W0;
+                    output = predictParam.ezp_lbl_func(temp_proj);
+                    fprintf(fout,"%f ",output);
+                }
+                fprintf(fout,"\n");
+            }
+            fclose(fout);
+        }
+    } else{
+        std::cerr << "Unrecognized Option ! Please run Train again...";
+    }
+
 }

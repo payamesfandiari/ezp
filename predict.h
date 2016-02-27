@@ -31,6 +31,8 @@ model * pick_best_err(model *mod, predict_param &predictParam, int cols);
 void bsp_one_predict(model *mod, problem *prob, predict_param &predictParam, std::string &output_file);
 void ezp_one_transform(model *mod, problem *prob, predict_param &predictParam, std::string &output_file);
 void bsp_multi_predict(std::ifstream &model_file,problem *prob, predict_param &predictParam, std::string &output_file);
+void ezp_multi_transform(std::ifstream &model_file, problem *prob, predict_param &predictParam,
+                         std::string &output_file);
 
 
 #endif //EZPLANE_PREDICT_H
