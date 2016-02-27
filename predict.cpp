@@ -415,9 +415,9 @@ void ezp_one_transform(model *mod, problem *prob, predict_param &predictParam, s
                 for (int k = 0; k < predictParam.ezp_size*predictParam.ils_itr; ++k) {
                     proj = 0 ;
                     for (int j = 0; j < prob->cols; ++j) {
-                        proj += prob->data[i * prob->cols + j] * m[k].W[j];
+                        proj += prob->data[i * prob->cols + j] * mod[k].W[j];
                     }
-                    proj += m[k].W0;
+                    proj += mod[k].W0;
                     output = predictParam.ezp_lbl_func(proj);
                     fprintf(fout,"%f ",output);
                 }
